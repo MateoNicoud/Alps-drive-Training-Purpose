@@ -13,8 +13,10 @@ async function listFilesOf(path) {
     });
 }
 const logFiles = files => {
+
     for (const file of files) {
         console.log(file);
+
     }
 };
 listFilesOf(homedir)
