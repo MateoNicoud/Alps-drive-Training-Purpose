@@ -74,6 +74,16 @@ app.get('/api/drive/:name', async (req, res) => {
 
     // Construit le chemin complet du répertoire
     const directoryPath = path.join(os.tmpdir(), fileName);
+    const stats = await fs.stat(directoryPath); // Récupère les informations sur le fichier/dossier
+
+    if(stats.isFile()){
+            const file = fs.readFileSync(directoryPath);
+            res.set('Content-Type', 'application/octet-stream');
+            res.set('Content-Disposition', `attachment; filename=${fileName}`);
+            res.send(file);
+
+    }else{
+
 
     try {
         // Récupère la liste des fichiers/dossiers dans le répertoire spécifié
@@ -91,10 +101,11 @@ app.get('/api/drive/:name', async (req, res) => {
         }));
 
         // Renvoie la liste formatée des fichiers/dossiers en tant que réponse JSON
-        res.json(formattedFiles);
+        return res.json(formattedFiles);
     } catch (error) {
         // Gère les erreurs
         return res.status(404).send(`Cannot read folder: ${error}`);
+    }
     }
 });
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
