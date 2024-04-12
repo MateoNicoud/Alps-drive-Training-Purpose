@@ -7,7 +7,7 @@ import path from 'path'
 const app = express()
 const port = 3000
 app.use(cors());
-
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.get('/api/drive', async (req, res) => {
     // on récupère le chemin du fichier tmp en fonction de son os
     const tempDir = os.tmpdir();
@@ -20,7 +20,7 @@ app.get('/api/drive', async (req, res) => {
             const filePath = path.join(tempDir, file);
             // on récupère les status des fichiers, soit leur type et tout le reste
             const stats = await fs.stat(filePath);
-            if(stats.isFile()){
+            if (stats.isFile()) {
 
                 return {
                     name: file,
@@ -28,21 +28,47 @@ app.get('/api/drive', async (req, res) => {
                     isFolder: stats.isDirectory(),
                     size: stats.size
                 };
-            } else{
+            } else {
                 return {
                     name: file,
                     // si c'est un dossier alors ça sera vrai
                     isFolder: stats.isDirectory(),
                 };
             }
+
         }));
         //la réponse renvoie en json notre tableau d'objets
-        res.json(formattedFiles)
-    } catch (error){
+        return res.json(formattedFiles)
+    } catch (error) {
         return res.status(404).send(`cannot read folder : ${error}`);
     }
 })
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.post('/api/drive', async (req, res) => {
+    const folderName = req.query.name; // Récupère le nom du dossier depuis les paramètres de l'URL
 
+    if (!(/^[a-zA-Z0-9]+$/.test(folderName))) {
+        res.status(400).send(`  ${folderName} N'est pas alphanumeric`)
+    } else {
+
+
+        const tempDir = os.tmpdir();
+
+        try {
+            // Construit le chemin complet du nouveau dossier
+            const folderPath = path.join(tempDir, folderName);
+
+            // Crée le nouveau dossier
+            await fs.mkdir(folderPath);
+
+            res.status(201).send(`Folder ${folderName} created successfully.`);
+        } catch (error) {
+            // Gère les erreurs
+            return res.status(500).send(`Error creating folder: ${error}`);
+        }
+    }
+});
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.get('/api/drive/:name', async (req, res) => {
     const fileName = req.params.name; // Récupère le nom du fichier/dossier depuis les paramètres de l'URL
 
@@ -66,17 +92,45 @@ app.get('/api/drive/:name', async (req, res) => {
 
         // Renvoie la liste formatée des fichiers/dossiers en tant que réponse JSON
         res.json(formattedFiles);
-    } catch (error){
+    } catch (error) {
         // Gère les erreurs
         return res.status(404).send(`Cannot read folder: ${error}`);
     }
 });
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+app.post('/api/drive/:name', async (req, res) => {
+    const fileName = req.params.name; // Récupère le nom du fichier/dossier depuis les paramètres de l'URL
+
+    const folderName = req.query.name; // Récupère le nom du dossier depuis les paramètres de l'URL
+
+    if (!(/^[a-zA-Z0-9]+$/.test(folderName))) {
+        res.status(400).send(`  ${folderName} N'est pas alphanumeric`)
+    } else if(!fileName) {
+        res.status(404).send(`  ${fileName} N'existe pas`)
+    } else {
 
 
+        const tempDir = os.tmpdir();
 
-function startServer(){
+        try {
+            // Construit le chemin complet du nouveau dossier
+            const folderPath = path.join(tempDir,fileName, folderName);
+
+            // Crée le nouveau dossier
+            await fs.mkdir(folderPath);
+
+            res.status(201).send(`Folder ${folderName} created successfully.`);
+        } catch (error) {
+            // Gère les erreurs
+            return res.status(500).send(`Error creating folder: ${error}`);
+        }
+    }
+});
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+function startServer() {
     app.listen(port, () => {
-    // api();
+        // api();
     })
     return app
 }
