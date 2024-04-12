@@ -1,8 +1,8 @@
-const startServer = require('./server');
+import {startServer} from './server.js'
 
 const app = startServer();
 
-app.get('/api/drive', (req, res) => {
-    console.log("got it");
-    res.send('Hello World!')
-})
+
+
+
+
