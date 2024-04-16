@@ -4,50 +4,45 @@ import {promises as fs} from 'fs';
 import os from 'os';
 import fss from 'fs'
 import path from 'path'
-import busboy from 'busboy';
-// const busboy = require('busboy');
+
+import fileUpload from 'express-fileupload'
 
 const app = express()
 const port = 3000
 app.use(cors());
+app.use(fileUpload());
+// const driveRouter = express.Router();
+// let itemRouter = express.Router({mergeParams:true});
+// driveRouter.use('/api/drive', itemRouteur);
+
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.get('/api/drive', async (req, res) => {
-    // on récupère le chemin du fichier tmp en fonction de son os
+app.get('/api/drive/', async (req, res) => {
     const tempDir = os.tmpdir();
-    // On lit tous les fichiers et répertoires contenus dans le répertoire temporaire
-    const files = await fs.readdir(tempDir)
-    // On crée notre tableau d'objet, on attend que toutes les promesses soient exécuté avant de la commencer
     try {
+        const files = await fs.readdir(tempDir)
         const formattedFiles = await Promise.all(files.map(async function (file) {
-            // on récupère l'Uri des fichiers à l'intérieur de tmp
             const filePath = path.join(tempDir, file);
-            // on récupère les status des fichiers, soit leur type et tout le reste
             const stats = await fs.stat(filePath);
             if (stats.isFile()) {
-
                 return {
                     name: file,
-                    // si c'est un dossier alors ça sera vrai
                     isFolder: stats.isDirectory(),
                     size: stats.size
                 };
             } else {
                 return {
                     name: file,
-                    // si c'est un dossier alors ça sera vrai
                     isFolder: stats.isDirectory(),
                 };
             }
-
         }));
-        //la réponse renvoie en json notre tableau d'objets
         return res.json(formattedFiles)
     } catch (error) {
         return res.status(404).send(`cannot read folder : ${error}`);
     }
-})
+});
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.post('/api/drive', async (req, res) => {
+app.post('/api/drive/', async (req, res) => {
     const folderName = req.query.name; // Récupère le nom du dossier depuis les paramètres de l'URL
 
     if (!(/^[a-zA-Z0-9]+$/.test(folderName))) {
@@ -72,7 +67,7 @@ app.post('/api/drive', async (req, res) => {
     }
 });
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.get('/api/drive/:name', async (req, res) => {
+app.get('/api/drive/:name(*)', async (req, res) => {
     const fileName = req.params.name; // Récupère le nom du fichier/dossier depuis les paramètres de l'URL
 
     // Construit le chemin complet du répertoire
@@ -84,7 +79,7 @@ app.get('/api/drive/:name', async (req, res) => {
             const fileContent = fss.readFileSync(directoryPath);
             res.set('Content-Type', 'application/octet-stream');
             res.set('Content-Disposition', `attachment; filename=${fileName}`);
-            res.send(fileContent);
+            res.status(200).send(fileContent);
 
         } else {
 
@@ -116,7 +111,7 @@ app.get('/api/drive/:name', async (req, res) => {
 });
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-app.post('/api/drive/:name', async (req, res) => {
+app.post('/api/drive/:name(*)', async (req, res) => {
     const fileName = req.params.name; // Récupère le nom du fichier/dossier depuis les paramètres de l'URL
 
     const folderName = req.query.name; // Récupère le nom du dossier depuis les paramètres de l'URL
@@ -145,7 +140,7 @@ app.post('/api/drive/:name', async (req, res) => {
     }
 });
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.delete('/api/drive/:folder/:name', async (req, res) => {
+app.delete('/api/drive/:folder/:name(*)', async (req, res) => {
     const name = req.params.name;
     const folder = req.params.folder;
     const filePath = path.join(os.tmpdir(), folder, name);
@@ -170,7 +165,7 @@ app.delete('/api/drive/:folder/:name', async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.delete('/api/drive/:name', async (req, res) => {
+app.delete('/api/drive/:name(*)', async (req, res) => {
     const name = req.params.name;
     const filePath = path.join(os.tmpdir(), name);
     const stats = await fs.stat(filePath); // Récupère les informations sur le fichier/dossier
@@ -195,80 +190,57 @@ app.delete('/api/drive/:name', async (req, res) => {
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-app.put('/api/drive', (req, res) => {
-    const busboyInstance = new busboy({headers: req.headers});
+app.put('/api/drive', async (req, res) => {
+    // Vérifier si un fichier est présent dans la requête
+    if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send('No files were uploaded.');
+    }
 
-    busboyInstance.on('file', (fieldname, file, filename, encoding, mimetype) => {
-        const tempDir = os.tmpdir();
-        const filePath = path.join(tempDir, filename);
+    const tempDir = os.tmpdir();
+    const file = req.files.file;
+    const fileName = file.name;
+    const filePath = path.join(tempDir, fileName);
 
-        const writeStream = fss.createWriteStream(filePath);
-        file.pipe(writeStream);
+    try {
+        // Écrire le contenu du fichier dans le fichier système
+        await file.mv(filePath);
 
-        writeStream.on('finish', () => {
-            console.log(`File ${filename} uploaded successfully.`);
-            res.status(201).send("File uploaded successfully.");
-        });
-    });
-
-    req.pipe(busboyInstance);
+        console.log("File created successfully");
+        res.status(201).send("File created successfully.");
+    } catch (error) {
+        console.log("Can't create this file", error);
+        res.status(500).send("Unable to create file.");
+    }
 });
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.put('/api/drive/:folder', (req, res) => {
+
+app.put('/api/drive/:folder(*)', async (req, res) => {
+    // Vérifier si un fichier est présent dans la requête
+    if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send('No files were uploaded.');
+    }
     const folder = req.params.folder;
 
-    // Vérifie si le dossier existe
-    const folderPath = path.join(os.tmpdir(), folder);
-    fss.access(folderPath, fss.constants.F_OK, async (err) => {
-        if (err) {
-            // Le dossier n'existe pas, retourne une erreur 404
-            return res.status(404).send(`Folder ${folder} does not exist.`);
-        }
+    const tempDir = os.tmpdir();
+    const file = req.files.file;
+    const fileName = file.name;
+    const filePath = path.join(tempDir,folder, fileName);
 
-        const busboyInstance = new busboy({ headers: req.headers });
+    try {
+        await file.mv(filePath);
 
-        let hasFile = false; // Variable pour vérifier si un fichier est présent dans la requête
-
-        // Écoute l'événement 'file' de Busboy
-        busboyInstance.on('file', (fieldname, file, filename, encoding, mimetype) => {
-            hasFile = true;
-
-            const filePath = path.join(folderPath, filename);
-
-            // Crée un flux d'écriture pour écrire le fichier sur le disque
-            const writeStream = fss.createWriteStream(filePath);
-
-            // Pipe le contenu du fichier vers le flux d'écriture
-            file.pipe(writeStream);
-
-            // Événement 'finish' une fois que l'écriture du fichier est terminée
-            writeStream.on('finish', () => {
-                console.log(`File ${filename} uploaded successfully.`);
-            });
-        });
-
-        // Événement 'finish' une fois que tous les fichiers ont été traités
-        busboyInstance.on('finish', () => {
-            if (!hasFile) {
-                // Aucun fichier n'a été trouvé dans la requête, retourne une erreur 400
-                return res.status(400).send('No files were uploaded.');
-            }
-
-            // Tous les fichiers ont été téléchargés avec succès, renvoie une réponse 201
-            res.status(201).send('File uploaded successfully.');
-        });
-
-        // Pipe la requête entrante vers l'instance de Busboy
-        req.pipe(busboyInstance);
-    });
+        console.log("File created successfully");
+        res.status(201).send("File created successfully.");
+    } catch (error) {
+        console.log("Can't create this file", error);
+        res.status(500).send("Unable to create file.");
+    }
 });
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 function startServer() {
-    app.listen(port, () => {
-        // api();
-    })
+    app.listen(port);
     return app
 }
 
