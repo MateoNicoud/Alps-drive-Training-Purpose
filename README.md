@@ -15,7 +15,7 @@ This project is an API for a fictitious storage service (drive), created for tra
 ---
 
 ### Usage:
-- Run `npm start` to start the server.
+- Run `npm run dev` to start the server.
 - The API will be accessible at `http://localhost:3000`.
 - This API is intended to be used with a front-end server.
 - You can use the following endpoints:
