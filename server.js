@@ -11,9 +11,7 @@ const app = express()
 const port = 3000
 app.use(cors());
 app.use(fileUpload());
-// const driveRouter = express.Router();
-// let itemRouter = express.Router({mergeParams:true});
-// driveRouter.use('/api/drive', itemRouteur);
+
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.get('/api/drive/', async (req, res) => {
