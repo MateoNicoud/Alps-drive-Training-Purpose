@@ -3,7 +3,7 @@
 ---
 
 ### Description:
-This project is an API for a fictitious storage service (drive), created for training purposes. It enables the management of folder creation, file download, file deletion, and retrieval of the file list within a specified folder.
+This project is an API for a fictitious storage service (drive), created for training purposes. It enables the management of folder creation, file download, file deletion, and retrieval of the file list within a specified folder. The core files are in the `src` folder.
 
 ---
 
