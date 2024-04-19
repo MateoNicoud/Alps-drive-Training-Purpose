@@ -152,7 +152,7 @@ const deleteFolder = async (req: Request, res: Response, next: NextFunction) => 
                 console.log("Delete file successfuly");
                 res.status(200).send("File deleted successfully.")
             } else if (stats.isDirectory()) {
-                await fs.rmdir(filePath); // Supprime le fichier
+                await fs.rmdir(filePath); // Supprime le dossier
 
                 console.log("Delete directory successfuly");
                 res.status(200).send("Directory deleted successfully.")
